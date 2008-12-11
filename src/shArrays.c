@@ -36,6 +36,12 @@
 #define _ARRAY_DEFINE
 #include "shArrayBase.h"
 
+#define _ITEM_T  SHuint16
+#define _ARRAY_T SHUint16Array
+#define _FUNC_T  shUint16Array
+#define _ARRAY_DEFINE
+#include "shArrayBase.h"
+
 #define _ITEM_T  SHfloat
 #define _ARRAY_T SHFloatArray
 #define _FUNC_T  shFloatArray

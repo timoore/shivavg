@@ -334,10 +334,10 @@ void testInit(int argc, char **argv,
   #if defined(__APPLE__) || defined(WIN32)
   /*glutInitDisplayString("rgba alpha double stencil samples=4");*/
   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA |
-                      GLUT_STENCIL | GLUT_MULTISAMPLE);
+                      GLUT_STENCIL | GLUT_MULTISAMPLE | GLUT_DEPTH);
   #else
   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA |
-                      GLUT_STENCIL | GLUT_MULTISAMPLE);
+                      GLUT_STENCIL | GLUT_MULTISAMPLE | GLUT_DEPTH);
   #endif
   
   glutInitWindowPosition(0,0);

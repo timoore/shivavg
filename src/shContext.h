@@ -61,7 +61,8 @@ typedef struct
 	VGImageMode         imageMode;
   
 	/* Scissor rectangles */
-	SHRectArray        scissor;
+  SHFloatArray       scissor;
+  SHUint16Array      scissorIndices;
   VGboolean          scissoring;
   VGboolean          masking;
   
@@ -166,4 +167,10 @@ VGContext* shGetContext();
   { if (COND) {shSetError(context,ERRORCODE); return RETVAL;} }
 
 
+extern void shBuildScissorContext(VGContext* c, SHint count, const void* values,
+                                  SHint floats);
+extern int shCopyOutScissorParams(VGContext *c, SHint count, void *values,
+                                  SHint floats);
+extern void shEnableScissoring(VGContext *c);
+extern void shDisableScissoring(VGContext *c);
 #endif /* __SHCONTEXT_H */
