@@ -130,7 +130,7 @@ void VGContext_ctor(VGContext *c)
   c->imageMode = VG_DRAW_IMAGE_NORMAL;
   
   /* Scissor rectangles */
-  SH_INITOBJ(SHFloatArray, c->scissor);
+  SH_INITOBJ(SHVector3Array, c->scissor);
   SH_INITOBJ(SHUint16Array, c->scissorIndices);
   c->scissoring = VG_FALSE;
   c->masking = VG_FALSE;
@@ -188,7 +188,7 @@ void VGContext_dtor(VGContext *c)
 {
   int i;
   
-  SH_DEINITOBJ(SHFloatArray, c->scissor);
+  SH_DEINITOBJ(SHVector3Array, c->scissor);
   SH_DEINITOBJ(SHUint16Array, c->scissorIndices);
   SH_DEINITOBJ(SHFloatArray, c->strokeDashPattern);
   
@@ -287,6 +287,24 @@ VG_API_CALL void vgFinish(void)
 VG_API_CALL void vgMask(VGImage mask, VGMaskOperation operation,
                         VGint x, VGint y, VGint width, VGint height)
 {
+}
+
+static makeRectangle(VGfloat x, VGfloat y, VGfloat w, VGfloat h, VGfloat z,
+                     SHVector3* coords, SHuint16* indices, SHuint16 indexBase)
+{
+  coords->x = x;  coords->y = y;  coords->z = z;
+  coords++;
+  coords->x = x + w;  coords->y = y;  coords->z = z;
+  coords++;
+  coords->x = x + w;  coords->y = y + h;  coords->z = z;
+  coords++;
+  coords->x = x;  coords->y = y + h;  coords->z = z;
+  indices[0] = indexBase;
+  indices[1] = indexBase + 1;
+  indices[2] = indexBase + 2;
+  indices[3] = indexBase;
+  indices[4] = indexBase + 2;
+  indices[5] = indexBase + 3;
 }
 
 VG_API_CALL void vgClear(VGint x, VGint y, VGint width, VGint height)
@@ -503,39 +521,31 @@ VG_API_CALL VGHardwareQueryResult vgHardwareQuery(VGHardwareQueryType key,
 void shBuildScissorContext(VGContext* c, SHint count, const void* values,
                            SHint floats)
 {
-  int i;
+  SHint numRects;
+  SHVector3* vert;
+  SHuint16* idx;
+  SHuint16 rectIdx;
+  SHint i;
 
   count = SH_MIN(count, SH_MAX_SCISSOR_RECTS * 4);
-  shFloatArrayClear(&c->scissor);
-  shUint16ArrayClear(&c->scissorIndices);
-  for (i=0; i<count; i+=4) {
+  numRects  = count / 4;
+  shVector3ArrayReserve(&c->scissor, count);
+  c->scissor.size = count;
+  shUint16ArrayReserve(&c->scissorIndices, numRects * 6);
+  c->scissorIndices.size = numRects * 6;
+  for (vert = c->scissor.items, idx = c->scissorIndices.items, rectIdx = 0;
+       rectIdx < count;
+       vert += 4, idx += 6, rectIdx += 4) {
     SHRectangle r;
-    SHuint16 indexBase = i;
-    r.x = shParamToFloat(values, floats, i+0);
-    r.y = shParamToFloat(values, floats, i+1);
-    r.w = shParamToFloat(values, floats, i+2);
-    r.h = shParamToFloat(values, floats, i+3);
-    if (r.w <= 0 || r.h <= 0)
-      continue;
-    shFloatArrayPushBack(&c->scissor, r.x);
-    shFloatArrayPushBack(&c->scissor, r.y);
-    shFloatArrayPushBack(&c->scissor, -.5f);
-    shFloatArrayPushBack(&c->scissor, r.x + r.w);
-    shFloatArrayPushBack(&c->scissor, r.y);
-    shFloatArrayPushBack(&c->scissor, -.5f);
-    shFloatArrayPushBack(&c->scissor, r.x + r.w);
-    shFloatArrayPushBack(&c->scissor, r.y + r.h);
-    shFloatArrayPushBack(&c->scissor, -.5f);
-    shFloatArrayPushBack(&c->scissor, r.x);
-    shFloatArrayPushBack(&c->scissor, r.y + r.h);
-    shFloatArrayPushBack(&c->scissor, -.5f);
-    /* 4 indices per quad too */
-    shUint16ArrayPushBack(&c->scissorIndices, indexBase);
-    shUint16ArrayPushBack(&c->scissorIndices, indexBase + 1);
-    shUint16ArrayPushBack(&c->scissorIndices, indexBase + 2);
-    shUint16ArrayPushBack(&c->scissorIndices, indexBase);
-    shUint16ArrayPushBack(&c->scissorIndices, indexBase + 2);
-    shUint16ArrayPushBack(&c->scissorIndices, indexBase + 3);
+    r.x = shParamToFloat(values, floats, rectIdx + 0);
+    r.y = shParamToFloat(values, floats, rectIdx + 1);
+    r.w = shParamToFloat(values, floats, rectIdx + 2);
+    r.h = shParamToFloat(values, floats, rectIdx + 3);
+    if (r.w < 0 || r.h < 0) {
+      r.w = 0;
+      r.h = 0;
+    }
+    makeRectangle(r.x, r.y, r.w, r.h, -.5f, vert, idx, rectIdx);
   }
   if (c->scissoring == VG_TRUE)
     shEnableScissoring(c);
@@ -544,22 +554,22 @@ void shBuildScissorContext(VGContext* c, SHint count, const void* values,
 int shCopyOutScissorParams(VGContext *c, SHint count, void *values,
                            SHint floats)
 {
-  int i, j;
+  int i;
 
-  if (count > (c->scissor.size / 3))
+  if (count > (c->scissor.size))
     return 1;
-  for (i = 0, j = 0; i < c->scissor.size; i += 12, j += 4) {
+  for (i = 0; i < c->scissor.size; i += 4) {
     SHRectangle r;
 
-    r.x = c->scissor.items[i];
-    r.y = c->scissor.items[i + 1];
-    r.w = c->scissor.items[i + 3] - r.x;
-    r.h = c->scissor.items[i + 7] - r.y;
+    r.x = c->scissor.items[i].x;
+    r.y = c->scissor.items[i].y;
+    r.w = c->scissor.items[i + 2].x - r.x;
+    r.h = c->scissor.items[i + 2].y - r.y;
     /* XXX should round to nearest integer */
-    shIntToParam((SHint)r.x, count, values, floats, j + 0);
-    shIntToParam((SHint)r.y, count, values, floats, j + 1);
-    shIntToParam((SHint)r.w, count, values, floats, j + 2);
-    shIntToParam((SHint)r.h, count, values, floats, j + 3);
+    shIntToParam((SHint)r.x, count, values, floats, i + 0);
+    shIntToParam((SHint)r.y, count, values, floats, i + 1);
+    shIntToParam((SHint)r.w, count, values, floats, i + 2);
+    shIntToParam((SHint)r.h, count, values, floats, i + 3);
   }
   return 0;
 }

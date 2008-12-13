@@ -58,4 +58,10 @@
 #define _ARRAY_DECLARE
 #include "shArrayBase.h"
 
+#define _ITEM_T SHVector3
+#define _ARRAY_T SHVector3Array
+#define _FUNC_T shVector3Array
+#define _ARRAY_DECLARE
+#include "shArrayBase.h"
+
 #endif

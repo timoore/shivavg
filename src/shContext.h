@@ -61,7 +61,7 @@ typedef struct
 	VGImageMode         imageMode;
   
 	/* Scissor rectangles */
-  SHFloatArray       scissor;
+  SHVector3Array     scissor;
   SHUint16Array      scissorIndices;
   VGboolean          scissoring;
   VGboolean          masking;

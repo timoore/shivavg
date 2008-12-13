@@ -54,3 +54,10 @@
 #define _COMPARE_T(x,y) 1
 #define _ARRAY_DEFINE
 #include "shArrayBase.h"
+
+#define _ITEM_T  SHVector3
+#define _ARRAY_T SHVector3Array
+#define _FUNC_T  shVector3Array
+#define _COMPARE_T(x,y) 1
+#define _ARRAY_DEFINE
+#include "shArrayBase.h"
