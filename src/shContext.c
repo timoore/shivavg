@@ -309,6 +309,9 @@ static makeRectangle(VGfloat x, VGfloat y, VGfloat w, VGfloat h, VGfloat z,
 
 VG_API_CALL void vgClear(VGint x, VGint y, VGint width, VGint height)
 {
+  SHVector3 clearVerts[4];
+  SHuint16 clearIdx[6];
+
   VG_GETCONTEXT(VG_NO_RETVAL);
   
   /* Clip to window */
@@ -317,29 +320,21 @@ VG_API_CALL void vgClear(VGint x, VGint y, VGint width, VGint height)
   if (width > context->surfaceWidth) width = context->surfaceWidth;
   if (height > context->surfaceHeight) height = context->surfaceHeight;
   
-  /* Check if scissoring needed */
-  if (x > 0 || y > 0 ||
-      width < context->surfaceWidth ||
-      height < context->surfaceHeight) {
-    
-    glScissor(x, y, width, height);
-    glEnable(GL_SCISSOR_TEST);
-  }
-  
+  makeRectangle((VGfloat)x, (VGfloat)y, (VGfloat)width, (VGfloat)height,
+                0.0f, clearVerts, clearIdx, 0);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
   /* Clear GL color buffer */
+  glEnableClientState(GL_VERTEX_ARRAY);
+  glVertexPointer(3, GL_FLOAT, 0, clearVerts);
+  glColor4fv(&context->clearColor.r);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, clearIdx);
+  glDisableClientState(GL_VERTEX_ARRAY);
+
   /* TODO: what about stencil and depth? when do we clear that?
      we would need some kind of special "begin" function at
      beginning of each drawing or clear the planes prior to each
      drawing where it takes places */
-  glClearColor(context->clearColor.r,
-               context->clearColor.g,
-               context->clearColor.b,
-               context->clearColor.a);
-  
-  glClear(GL_COLOR_BUFFER_BIT |
-          GL_STENCIL_BUFFER_BIT);
-  
-  glDisable(GL_SCISSOR_TEST);
   
   VG_RETURN(VG_NO_RETVAL);}
 

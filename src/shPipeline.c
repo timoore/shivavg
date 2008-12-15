@@ -243,6 +243,12 @@ VG_API_CALL void vgDrawPath(VGPath path, VGbitfield paintModes)
     
     /* Tesselate into stencil */
     glEnable(GL_STENCIL_TEST);
+    /* Clear the stencil buffer first */
+    glStencilFunc(GL_ALWAYS, 0, 0);
+    glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    shDrawBoundBox(context, p, VG_FILL_PATH);
+
     glStencilFunc(GL_ALWAYS, 0, 0);
     glStencilOp(GL_INVERT, GL_INVERT, GL_INVERT);
     glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -259,14 +265,6 @@ VG_API_CALL void vgDrawPath(VGPath path, VGbitfield paintModes)
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     shDrawPaintMesh(context, &p->min, &p->max, VG_FILL_PATH, GL_TEXTURE0);
 
-    /* Clear stencil for sure */
-    /* TODO: Is there any way to do this safely along
-       with the paint generation pass?? */
-    glDisable(GL_BLEND);
-    glDisable(GL_MULTISAMPLE);
-    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-    shDrawBoundBox(context, p, VG_FILL_PATH);
-    
     /* Reset state */
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDisable(GL_STENCIL_TEST);
@@ -287,6 +285,12 @@ VG_API_CALL void vgDrawPath(VGPath path, VGbitfield paintModes)
 
       /* Stroke into stencil */
       glEnable(GL_STENCIL_TEST);
+      /* Clear the stencil buffer first */
+      glStencilFunc(GL_ALWAYS, 0, 0);
+      glStencilOp(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+      glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+      shDrawBoundBox(context, p, VG_STROKE_PATH);
+
       glStencilFunc(GL_NOTEQUAL, 1, 1);
       glStencilOp(GL_KEEP, GL_INCR, GL_INCR);
       glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -302,12 +306,6 @@ VG_API_CALL void vgDrawPath(VGPath path, VGbitfield paintModes)
       glStencilOp(GL_ZERO, GL_ZERO, GL_ZERO);
       glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
       shDrawPaintMesh(context, &p->min, &p->max, VG_STROKE_PATH, GL_TEXTURE0);
-      
-      /* Clear stencil for sure */
-      glDisable(GL_BLEND);
-      glDisable(GL_MULTISAMPLE);
-      glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-      shDrawBoundBox(context, p, VG_STROKE_PATH);
       
       /* Reset state */
       glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -334,7 +332,7 @@ VG_API_CALL void vgDrawPath(VGPath path, VGbitfield paintModes)
     }
   }
   
-  
+  glDisable(GL_MULTISAMPLE);
   glPopMatrix();
   
   VG_RETURN(VG_NO_RETVAL);
