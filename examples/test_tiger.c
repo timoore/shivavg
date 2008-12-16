@@ -36,7 +36,7 @@ void display(float interval)
 {
   int i;
   const VGfloat *style;
-  VGfloat clearColor[] = {1,1,1,1};
+  static VGfloat clearColor[] = {1,1,1,1};
   static int lastScissor = 0;
 
   if (animate) {
