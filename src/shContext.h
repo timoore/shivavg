@@ -107,6 +107,8 @@ typedef struct
   SHPaintArray      paints;
   SHImageArray      images;
 
+  SHint glMajor;
+  SHint glMinor;
   /* Pointers to extensions */
   SHint isGLAvailable_ClampToEdge;
   SHint isGLAvailable_MirroredRepeat;

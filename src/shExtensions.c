@@ -83,7 +83,13 @@ PFVOID shGetProcAddress(const char *name)
 void shLoadExtensions(VGContext *c)
 {
   const char *ext = (const char*)glGetString(GL_EXTENSIONS);
-  
+  const char *versionStr = glGetString(GL_VERSION);
+  char *decimal = strchr(versionStr, '.');
+
+  c->glMajor = (SHint)strtol(versionStr, 0, 10);
+  c->glMinor = 0;
+  if (decimal && *(decimal + 1))
+    c->glMinor = strtol(decimal + 1, 0, 10);
   /* GL_TEXTURE_CLAMP_TO_EDGE */
   if (checkExtension(ext, "GL_EXT_texture_edge_clamp"))
     c->isGLAvailable_ClampToEdge = 1;
@@ -103,16 +109,24 @@ void shLoadExtensions(VGContext *c)
   
   
   /* glActiveTexture, glMultiTexCoord1f */  
-  if (checkExtension(ext, "GL_ARB_multitexture")) {    
+  if ((c->glMajor > 1 || c->glMinor >= 3)
+      || checkExtension(ext, "GL_ARB_multitexture")) {
     c->isGLAvailable_Multitexture = 1;
-    
+    if ((c->glMajor > 1 || c->glMinor >= 3)) {
+      c->pglActiveTexture = (SH_PGLACTIVETEXTURE)
+        shGetProcAddress("glActiveTexture");
+      c->pglMultiTexCoord1f = (SH_PGLMULTITEXCOORD1F)
+        shGetProcAddress("glMultiTexCoord1f");
+      c->pglMultiTexCoord2f = (SH_PGLMULTITEXCOORD2F)
+        shGetProcAddress("glMultiTexCoord2f");
+    } else {
     c->pglActiveTexture = (SH_PGLACTIVETEXTURE)
       shGetProcAddress("glActiveTextureARB");
     c->pglMultiTexCoord1f = (SH_PGLMULTITEXCOORD1F)
       shGetProcAddress("glMultiTexCoord1fARB");
     c->pglMultiTexCoord2f = (SH_PGLMULTITEXCOORD2F)
       shGetProcAddress("glMultiTexCoord2fARB");
-    
+    }
     if (c->pglActiveTexture == NULL || c->pglMultiTexCoord1f == NULL ||
         c->pglMultiTexCoord2f == NULL)
       c->isGLAvailable_Multitexture = 0;
