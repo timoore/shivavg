@@ -289,28 +289,33 @@ VG_API_CALL void vgMask(VGImage mask, VGMaskOperation operation,
 {
 }
 
-static makeRectangle(VGfloat x, VGfloat y, VGfloat w, VGfloat h, VGfloat z,
-                     SHVector3* coords, SHuint16* indices, SHuint16 indexBase)
+static void makeRectangle(VGfloat x, VGfloat y, VGfloat w, VGfloat h, VGfloat z,
+                          SHVector3* coords, SHuint16* indices,
+                          SHuint16 indexBase)
 {
-  coords->x = x;  coords->y = y;  coords->z = z;
-  coords++;
-  coords->x = x + w;  coords->y = y;  coords->z = z;
-  coords++;
-  coords->x = x + w;  coords->y = y + h;  coords->z = z;
-  coords++;
-  coords->x = x;  coords->y = y + h;  coords->z = z;
-  indices[0] = indexBase;
-  indices[1] = indexBase + 1;
-  indices[2] = indexBase + 2;
-  indices[3] = indexBase;
-  indices[4] = indexBase + 2;
-  indices[5] = indexBase + 3;
+  if (coords) {
+    coords->x = x;  coords->y = y;  coords->z = z;
+    coords++;
+    coords->x = x + w;  coords->y = y;  coords->z = z;
+    coords++;
+    coords->x = x + w;  coords->y = y + h;  coords->z = z;
+    coords++;
+    coords->x = x;  coords->y = y + h;  coords->z = z;
+  }
+  if (indices) {
+    indices[0] = indexBase;
+    indices[1] = indexBase + 1;
+    indices[2] = indexBase + 2;
+    indices[3] = indexBase;
+    indices[4] = indexBase + 2;
+    indices[5] = indexBase + 3;
+  }
 }
 
 VG_API_CALL void vgClear(VGint x, VGint y, VGint width, VGint height)
 {
   SHVector3 clearVerts[4];
-  SHuint16 clearIdx[6];
+  static SHuint16 clearIdx[6] = {0, 1, 2, 0, 2, 3};
 
   VG_GETCONTEXT(VG_NO_RETVAL);
   
@@ -321,7 +326,7 @@ VG_API_CALL void vgClear(VGint x, VGint y, VGint width, VGint height)
   if (height > context->surfaceHeight) height = context->surfaceHeight;
   
   makeRectangle((VGfloat)x, (VGfloat)y, (VGfloat)width, (VGfloat)height,
-                0.0f, clearVerts, clearIdx, 0);
+                0.0f, clearVerts, 0, 0);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
   /* Clear GL color buffer */
