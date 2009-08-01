@@ -225,7 +225,7 @@ vguRoundRect .......................... FULLY implemented
 vguEllipse ............................ FULLY implemented
 vguArc ................................ FULLY implemented
 vguComputeWarpQuadToSquare ............ NOT implemented
-vguComputeWarpSquareToQuad ............ NOT implemented
+vguComputeWarpSquareToQuad ............ FULLY implemented
 vguComputeWarpQuadToQuad .............. NOT implemented
 
 
