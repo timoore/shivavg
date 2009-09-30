@@ -15,6 +15,7 @@ VGfloat sx=1.0f, sy=1.0f;
 VGfloat tx=1.0f, ty=1.0f;
 VGfloat ang = 0.0f;
 int animate = 1;
+int scissor = 0;
 char mode = 'z';
 
 VGfloat startX = 0.0f;
@@ -28,19 +29,26 @@ const char commands[] =
   "H - this help\n"
   "Z - zoom mode\n"
   "P - pan mode\n"
+  "S - toggle scissor\n"
   "SPACE - animation pause\\play\n";
 
 void display(float interval)
 {
   int i;
   const VGfloat *style;
-  VGfloat clearColor[] = {1,1,1,1};
-  
+  static VGfloat clearColor[] = {1,1,1,1};
+  static int lastScissor = 0;
+
   if (animate) {
     ang += interval * 360 * 0.1f;
     if (ang > 360) ang -= 360;
   }
-  
+
+  if (lastScissor != scissor) {
+    vgSeti(VG_SCISSORING, scissor ? VG_TRUE : VG_FALSE);
+    lastScissor = scissor;
+  }
+
   vgSetfv(VG_CLEAR_COLOR, 4, clearColor);
   vgClear(0,0,testWidth(),testHeight());
   
@@ -124,6 +132,10 @@ void key(unsigned char code, int x, int y)
     /* Show help */
     testOverlayString(commands);
     return;
+
+  case 's':
+    scissor = !scissor;
+    return;
     
   default:
     return;
@@ -138,6 +150,12 @@ void loadTiger()
 {
   int i;
   VGPath temp;
+  VGint scissorCoords[] =
+    { 150, 150, 300, 300,
+      100, 100, 100, 100,
+      400, 100, 100, 100,
+      400, 400, 100, 100,
+      100, 400, 100, 100};
   
   temp = testCreatePath();  
   tigerPaths = (VGPath*)malloc(pathCount * sizeof(VGPath));
@@ -161,6 +179,8 @@ void loadTiger()
   vgSetPaint(tigerFill, VG_FILL_PATH);
   vgLoadIdentity();
   vgDestroyPath(temp);
+  vgSetiv(VG_SCISSOR_RECTS, sizeof(scissorCoords) / sizeof(VGint),
+          scissorCoords);
 }
 
 void cleanup()

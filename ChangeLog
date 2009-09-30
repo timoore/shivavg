@@ -1,3 +1,7 @@
+11 Dec 2008 Tim Moore  <timoore@redhat.com>
+
+  * Implemented the scissor test.
+
 04 Feb 2008 Ivan Leben <ivan.leben@gmail.com>
 
   * shImage.c: shCopyPixels uses memcpy when formats are

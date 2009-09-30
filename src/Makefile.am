@@ -1,5 +1,5 @@
 lib_LTLIBRARIES = libOpenVG.la
-libOpenVG_la_CFLAGS = -ansi -pedantic -I$(top_builddir)/include/vg
+libOpenVG_la_CFLAGS = -ansi -pedantic -I$(top_srcdir)/include/vg
 libOpenVG_la_SOURCES =\
 	shDefs.h\
 	shExtensions.h\
@@ -25,5 +25,5 @@ libOpenVG_la_SOURCES =\
 
 VG_includedir = $(includedir)/vg
 VG_include_HEADERS =\
-	$(top_builddir)/include/vg/openvg.h\
-	$(top_builddir)/include/vg/vgu.h
+	$(top_srcdir)/include/vg/openvg.h\
+	$(top_srcdir)/include/vg/vgu.h

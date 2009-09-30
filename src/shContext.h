@@ -61,7 +61,8 @@ typedef struct
 	VGImageMode         imageMode;
   
 	/* Scissor rectangles */
-	SHRectArray        scissor;
+  SHVector3Array     scissor;
+  SHUint16Array      scissorIndices;
   VGboolean          scissoring;
   VGboolean          masking;
   
@@ -106,6 +107,8 @@ typedef struct
   SHPaintArray      paints;
   SHImageArray      images;
 
+  SHint glMajor;
+  SHint glMinor;
   /* Pointers to extensions */
   SHint isGLAvailable_ClampToEdge;
   SHint isGLAvailable_MirroredRepeat;
@@ -166,4 +169,10 @@ VGContext* shGetContext();
   { if (COND) {shSetError(context,ERRORCODE); return RETVAL;} }
 
 
+extern void shBuildScissorContext(VGContext* c, SHint count, const void* values,
+                                  SHint floats);
+extern int shCopyOutScissorParams(VGContext *c, SHint count, void *values,
+                                  SHint floats);
+extern void shEnableScissoring(VGContext *c);
+extern void shDisableScissoring(VGContext *c);
 #endif /* __SHCONTEXT_H */

@@ -1,5 +1,5 @@
 # Relative path from here to uninstalled library
-INCLUDE_VG_DIR = $(top_builddir)/include
+INCLUDE_VG_DIR = $(top_srcdir)/include
 LIB_VG_DIR = $(top_builddir)/src
 LIB_VG = ${LIB_VG_DIR}/libOpenVG.la
 

@@ -135,8 +135,11 @@ void testOverlayString(const char *format, ...)
   
   va_start(ap, format);
   len = vsnprintf(NULL, 0, format, ap);
+  va_end(ap);
   overtext = (char*)malloc(len+1);
-  if (!overtext) {va_end(ap); return;}
+  if (!overtext)
+    return;
+  va_start(ap, format);
   vsnprintf(overtext, len+1, format, ap);
   va_end(ap);
 }
@@ -153,8 +156,11 @@ void testDrawString(float x, float y, const char *format, ...)
   
   va_start(ap, format);
   len = vsnprintf(NULL, 0, format, ap);
+  va_end(ap);
   text = (char*)malloc(len+1);
-  if (!text) {va_end(ap); return;}
+  if (!text)
+    return;
+  va_start(ap, format);
   vsnprintf(text, len+1, format, ap);
   va_end(ap);
   
@@ -334,10 +340,10 @@ void testInit(int argc, char **argv,
   #if defined(__APPLE__) || defined(WIN32)
   /*glutInitDisplayString("rgba alpha double stencil samples=4");*/
   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA |
-                      GLUT_STENCIL | GLUT_MULTISAMPLE);
+                      GLUT_STENCIL | GLUT_MULTISAMPLE | GLUT_DEPTH);
   #else
   glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_ALPHA |
-                      GLUT_STENCIL | GLUT_MULTISAMPLE);
+                      GLUT_STENCIL | GLUT_MULTISAMPLE | GLUT_DEPTH);
   #endif
   
   glutInitWindowPosition(0,0);

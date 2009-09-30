@@ -21,6 +21,7 @@
 #define VG_API_EXPORT
 #include "openvg.h"
 #include "shContext.h"
+#include "shParams.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -56,6 +57,11 @@ VG_API_CALL VGboolean vgCreateContextSH(VGint width, VGint height)
   
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
+
+  /* depth buffer clear value for scissor test */
+  glClearDepth(0.0);
+  glDepthMask(GL_FALSE);
+  glDisable(GL_DEPTH_TEST);
   
   return VG_TRUE;
 }
@@ -124,7 +130,8 @@ void VGContext_ctor(VGContext *c)
   c->imageMode = VG_DRAW_IMAGE_NORMAL;
   
   /* Scissor rectangles */
-  SH_INITOBJ(SHRectArray, c->scissor);
+  SH_INITOBJ(SHVector3Array, c->scissor);
+  SH_INITOBJ(SHUint16Array, c->scissorIndices);
   c->scissoring = VG_FALSE;
   c->masking = VG_FALSE;
   
@@ -181,7 +188,8 @@ void VGContext_dtor(VGContext *c)
 {
   int i;
   
-  SH_DEINITOBJ(SHRectArray, c->scissor);
+  SH_DEINITOBJ(SHVector3Array, c->scissor);
+  SH_DEINITOBJ(SHUint16Array, c->scissorIndices);
   SH_DEINITOBJ(SHFloatArray, c->strokeDashPattern);
   
   /* Destroy resources */
@@ -281,8 +289,34 @@ VG_API_CALL void vgMask(VGImage mask, VGMaskOperation operation,
 {
 }
 
+static void makeRectangle(VGfloat x, VGfloat y, VGfloat w, VGfloat h, VGfloat z,
+                          SHVector3* coords, SHuint16* indices,
+                          SHuint16 indexBase)
+{
+  if (coords) {
+    coords->x = x;  coords->y = y;  coords->z = z;
+    coords++;
+    coords->x = x + w;  coords->y = y;  coords->z = z;
+    coords++;
+    coords->x = x + w;  coords->y = y + h;  coords->z = z;
+    coords++;
+    coords->x = x;  coords->y = y + h;  coords->z = z;
+  }
+  if (indices) {
+    indices[0] = indexBase;
+    indices[1] = indexBase + 1;
+    indices[2] = indexBase + 2;
+    indices[3] = indexBase;
+    indices[4] = indexBase + 2;
+    indices[5] = indexBase + 3;
+  }
+}
+
 VG_API_CALL void vgClear(VGint x, VGint y, VGint width, VGint height)
 {
+  SHVector3 clearVerts[4];
+  static SHuint16 clearIdx[6] = {0, 1, 2, 0, 2, 3};
+
   VG_GETCONTEXT(VG_NO_RETVAL);
   
   /* Clip to window */
@@ -291,33 +325,24 @@ VG_API_CALL void vgClear(VGint x, VGint y, VGint width, VGint height)
   if (width > context->surfaceWidth) width = context->surfaceWidth;
   if (height > context->surfaceHeight) height = context->surfaceHeight;
   
-  /* Check if scissoring needed */
-  if (x > 0 || y > 0 ||
-      width < context->surfaceWidth ||
-      height < context->surfaceHeight) {
-    
-    glScissor(x, y, width, height);
-    glEnable(GL_SCISSOR_TEST);
-  }
-  
+  makeRectangle((VGfloat)x, (VGfloat)y, (VGfloat)width, (VGfloat)height,
+                0.0f, clearVerts, 0, 0);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
   /* Clear GL color buffer */
+  glEnableClientState(GL_VERTEX_ARRAY);
+  glVertexPointer(3, GL_FLOAT, 0, clearVerts);
+  glColor4fv(&context->clearColor.r);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, clearIdx);
+  glDisableClientState(GL_VERTEX_ARRAY);
+
   /* TODO: what about stencil and depth? when do we clear that?
      we would need some kind of special "begin" function at
      beginning of each drawing or clear the planes prior to each
      drawing where it takes places */
-  glClearColor(context->clearColor.r,
-               context->clearColor.g,
-               context->clearColor.b,
-               context->clearColor.a);
   
-  glClear(GL_COLOR_BUFFER_BIT |
-          GL_STENCIL_BUFFER_BIT |
-          GL_DEPTH_BUFFER_BIT);
-  
-  glDisable(GL_SCISSOR_TEST);
-  
-  VG_RETURN(VG_NO_RETVAL);
-}
+  VG_RETURN(VG_NO_RETVAL);}
+
 
 /*-----------------------------------------------------------
  * Returns the matrix currently selected via VG_MATRIX_MODE
@@ -491,4 +516,92 @@ VG_API_CALL VGHardwareQueryResult vgHardwareQuery(VGHardwareQueryType key,
                                                   VGint setting)
 {
   return VG_HARDWARE_UNACCELERATED;
+}
+
+void shBuildScissorContext(VGContext* c, SHint count, const void* values,
+                           SHint floats)
+{
+  SHint numRects;
+  SHVector3* vert;
+  SHuint16* idx;
+  SHuint16 rectIdx;
+  SHint i;
+
+  count = SH_MIN(count, SH_MAX_SCISSOR_RECTS * 4);
+  numRects  = count / 4;
+  shVector3ArrayReserve(&c->scissor, count);
+  c->scissor.size = count;
+  shUint16ArrayReserve(&c->scissorIndices, numRects * 6);
+  c->scissorIndices.size = numRects * 6;
+  for (vert = c->scissor.items, idx = c->scissorIndices.items, rectIdx = 0;
+       rectIdx < count;
+       vert += 4, idx += 6, rectIdx += 4) {
+    SHRectangle r;
+    r.x = shParamToFloat(values, floats, rectIdx + 0);
+    r.y = shParamToFloat(values, floats, rectIdx + 1);
+    r.w = shParamToFloat(values, floats, rectIdx + 2);
+    r.h = shParamToFloat(values, floats, rectIdx + 3);
+    if (r.w < 0 || r.h < 0) {
+      r.w = 0;
+      r.h = 0;
+    }
+    makeRectangle(r.x, r.y, r.w, r.h, -.5f, vert, idx, rectIdx);
+  }
+  if (c->scissoring == VG_TRUE)
+    shEnableScissoring(c);
+}
+
+int shCopyOutScissorParams(VGContext *c, SHint count, void *values,
+                           SHint floats)
+{
+  int i;
+
+  if (count > (c->scissor.size))
+    return 1;
+  for (i = 0; i < c->scissor.size; i += 4) {
+    SHRectangle r;
+
+    r.x = c->scissor.items[i].x;
+    r.y = c->scissor.items[i].y;
+    r.w = c->scissor.items[i + 2].x - r.x;
+    r.h = c->scissor.items[i + 2].y - r.y;
+    /* XXX should round to nearest integer */
+    shIntToParam((SHint)r.x, count, values, floats, i + 0);
+    shIntToParam((SHint)r.y, count, values, floats, i + 1);
+    shIntToParam((SHint)r.w, count, values, floats, i + 2);
+    shIntToParam((SHint)r.h, count, values, floats, i + 3);
+  }
+  return 0;
+}
+
+/* The scissor test makes use of the depth buffer. The default ortho2D
+   z range is from 1 to -1. The depth buffer is cleared to the near
+   plane, so that nothing can pass the depth test. The scissor
+   rectangles are drawn at -.5, which punches out a mask in the depth buffer.
+   Stroke polygons and everything else are rendered at z = 0, so they
+   will be rendered where the scissor rectangles were drawn. */
+
+void shEnableScissoring(VGContext *c)
+{
+  glDepthMask(GL_TRUE);
+  glClear(GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_DEPTH_TEST);
+  if (c->scissor.size > 0) {
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    /* Render scissor polys with depth test "disabled." */
+    glDepthFunc(GL_ALWAYS);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3, GL_FLOAT, 0, c->scissor.items);
+    glDrawElements(GL_TRIANGLES, c->scissorIndices.size, GL_UNSIGNED_SHORT,
+                   c->scissorIndices.items);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+  }
+  glDepthMask(GL_FALSE);
+  glDepthFunc(GL_LESS);
+}
+
+void shDisableScissoring(VGContext *c)
+{
+  glDisable(GL_DEPTH_TEST);
 }
