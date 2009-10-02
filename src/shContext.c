@@ -53,7 +53,7 @@ VG_API_CALL VGboolean vgCreateContextSH(VGint width, VGint height)
   
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(0,width,0,height,-1,1);
+  gluOrtho2D(0,width,0,height);
   
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
@@ -79,7 +79,7 @@ VG_API_CALL void vgResizeSurfaceSH(VGint width, VGint height)
   
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(0,width,0,height,-1,1);
+  gluOrtho2D(0,width,0,height);
   
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
@@ -316,7 +316,7 @@ VG_API_CALL void vgClear(VGint x, VGint y, VGint width, VGint height)
 {
   SHVector3 clearVerts[4];
   static SHuint16 clearIdx[6] = {0, 1, 2, 0, 2, 3};
-
+  
   VG_GETCONTEXT(VG_NO_RETVAL);
   
   /* Clip to window */
@@ -324,6 +324,23 @@ VG_API_CALL void vgClear(VGint x, VGint y, VGint width, VGint height)
   if (y < 0) y = 0;
   if (width > context->surfaceWidth) width = context->surfaceWidth;
   if (height > context->surfaceHeight) height = context->surfaceHeight;
+  /* Check if scissoring needed */
+  if (context->scissoring == VG_FALSE) {
+    if (x > 0 || y > 0 ||
+        width < context->surfaceWidth ||
+        height < context->surfaceHeight) {
+    
+      glScissor(x, y, width, height);
+      glEnable(GL_SCISSOR_TEST);
+    }
+    glClearColor(context->clearColor.r,
+                 context->clearColor.g,
+                 context->clearColor.b,
+                 context->clearColor.a);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDisable(GL_SCISSOR_TEST);
+    VG_RETURN(VG_NO_RETVAL);
+  }
   
   makeRectangle((VGfloat)x, (VGfloat)y, (VGfloat)width, (VGfloat)height,
                 0.0f, clearVerts, 0, 0);
@@ -341,7 +358,8 @@ VG_API_CALL void vgClear(VGint x, VGint y, VGint width, VGint height)
      beginning of each drawing or clear the planes prior to each
      drawing where it takes places */
   
-  VG_RETURN(VG_NO_RETVAL);}
+  VG_RETURN(VG_NO_RETVAL);
+}
 
 
 /*-----------------------------------------------------------
@@ -555,12 +573,12 @@ int shCopyOutScissorParams(VGContext *c, SHint count, void *values,
                            SHint floats)
 {
   int i;
-
+  
   if (count > (c->scissor.size))
     return 1;
   for (i = 0; i < c->scissor.size; i += 4) {
     SHRectangle r;
-
+    
     r.x = c->scissor.items[i].x;
     r.y = c->scissor.items[i].y;
     r.w = c->scissor.items[i + 2].x - r.x;
