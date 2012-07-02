@@ -85,15 +85,29 @@ typedef struct SHPath
   void *data;
   SHint segCount;
   SHint dataCount;
-  
+
   /* Subdivision */
   SHVertexArray vertices;
   SHVector2 min, max;
-  SHVector2 surfMin, surfMax;
   
   /* Additional stroke geometry (dash vertices if
      path dashed or triangle vertices if width > 1 */
   SHVector2Array stroke;
+
+  /* Cache */
+  VGboolean      cacheDataValid;
+
+  VGboolean      cacheTransformInit;
+  SHMatrix3x3    cacheTransform;
+
+  VGboolean      cacheStrokeInit;
+  VGboolean      cacheStrokeTessValid;
+  SHfloat        cacheStrokeLineWidth;
+  VGCapStyle     cacheStrokeCapStyle;
+  VGJoinStyle    cacheStrokeJoinStyle;
+  SHfloat        cacheStrokeMiterLimit;
+  SHfloat        cacheStrokeDashPhase;
+  VGboolean      cacheStrokeDashPhaseReset;
   
 } SHPath;
 

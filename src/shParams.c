@@ -387,10 +387,9 @@ static void shSet(VGContext *context, VGParamType type, SHint count,
     break;
   case VG_SCISSOR_RECTS:
     
-    /* TODO: limit by the VG_MAX_SCISSOR_RECTS value */
     SH_RETURN_ERR_IF(count % 4, VG_ILLEGAL_ARGUMENT_ERROR, SH_NO_RETVAL);
     shRectArrayClear(&context->scissor);
-    for (i=0; i<count; i+=4) {
+    for (i=0; i<count && i<SH_MAX_SCISSOR_RECTS; i+=4) {
       SHRectangle r;
       r.x = shParamToFloat(values, floats, i+0);
       r.y = shParamToFloat(values, floats, i+1);

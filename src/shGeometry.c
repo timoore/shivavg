@@ -799,10 +799,9 @@ void shStrokePath(VGContext* c, SHPath *p)
 }
 
 
-/*----------------------------------------------------------
- * Transforms the tessellation vertices using the inverse
- * of the current path-user-to-surface matrix
- *----------------------------------------------------------*/
+/*-------------------------------------------------------------
+ * Transforms the tessellation vertices using the given matrix
+ *-------------------------------------------------------------*/
 
 void shTransformVertices(SHMatrix3x3 *m, SHPath *p)
 {
@@ -814,10 +813,11 @@ void shTransformVertices(SHMatrix3x3 *m, SHPath *p)
     TRANSFORM2((*v), (*m)); }
 }
 
-/*-----------------------------------------------------------
- * Finds the tight bounding box of a path defined by its
- * control points in path's own coordinate system.
- *-----------------------------------------------------------*/
+/*--------------------------------------------------------
+ * Finds the tight bounding box of path's tesselation
+ * vertices. Depends on whether the path had been
+ * tesselated in user or surface space.
+ *--------------------------------------------------------*/
 
 void shFindBoundbox(SHPath *p)
 {
@@ -842,10 +842,10 @@ void shFindBoundbox(SHPath *p)
   }
 }
 
-/*-----------------------------------------------------------
- * Outputs a tight bounding box of a path defined by its
- * control points in path's own coordinate system.
- *-----------------------------------------------------------*/
+/*--------------------------------------------------------
+ * Outputs a tight bounding box of a path in path's own
+ * coordinate system.
+ *--------------------------------------------------------*/
 
 VG_API_CALL void vgPathBounds(VGPath path,
                               VGfloat * minX, VGfloat * minY,
@@ -915,6 +915,9 @@ VG_API_CALL void vgPathTransformedBounds(VGPath path,
   *minY = p->min.y;
   *width = p->max.x - p->min.x;
   *height = p->max.y - p->min.y;
+
+  /* Invalidate subdivision for rendering */
+  p->cacheDataValid = VG_FALSE;
   
   VG_RETURN(VG_NO_RETVAL);
 }

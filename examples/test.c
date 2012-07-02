@@ -185,6 +185,11 @@ void testDrawString(float x, float y, const char *format, ...)
   free(text);
 }
 
+void testAnimate(void)
+{
+  glutPostRedisplay ();
+}
+
 void testDisplay(void)
 {
   int now, msinterval;
@@ -346,7 +351,7 @@ void testInit(int argc, char **argv,
   
   glutReshapeFunc(testReshape);
   glutDisplayFunc(testDisplay);
-  glutIdleFunc(testDisplay);
+  glutIdleFunc(testAnimate);
   glutKeyboardFunc(testKeyboard);
   glutSpecialFunc(testSpecialKeyboard);
   glutMouseFunc(testButton);
