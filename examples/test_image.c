@@ -283,8 +283,8 @@ void specialKey(int key, int x, int y)
 
 int isPointInBoundbox(VGPath p, float x, float y)
 {
-  VGfloat minX, minY;
-  VGfloat width, height;
+  VGfloat minX=0.0f, minY=0.0f;
+  VGfloat width=0.0f, height=0.0f;
   vgPathTransformedBounds(p, &minX, &minY, &width, &height);
   return (x >= minX && x <= minX + width &&
           y >= minY && y <= minY + height);

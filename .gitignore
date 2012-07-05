@@ -10,3 +10,7 @@ depcomp
 install-sh
 ltmain.sh
 missing
+Debug
+Release
+*.ncb
+*.vcproj.*.user

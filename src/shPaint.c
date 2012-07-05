@@ -51,8 +51,12 @@ void SHPaint_ctor(SHPaint *p)
   p->tilingMode = VG_TILE_FILL;
   for (i=0; i<4; ++i) p->linearGradient[i] = 0.0f;
   for (i=0; i<5; ++i) p->radialGradient[i] = 0.0f;
-  glGenTextures(1, &p->texture);
   p->pattern = VG_INVALID_HANDLE;
+  
+  glGenTextures(1, &p->texture);
+  glBindTexture(GL_TEXTURE_1D, p->texture);
+  glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA, SH_GRADIENT_TEX_SIZE, 0,
+               GL_RGBA, GL_FLOAT, NULL);
 }
 
 void SHPaint_dtor(SHPaint *p)
@@ -178,8 +182,8 @@ void shUpdateColorRampTexture(SHPaint *p)
   /* Update texture image */
   glBindTexture(GL_TEXTURE_1D, p->texture);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-  glTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA, SH_GRADIENT_TEX_SIZE, 0,
-               GL_RGBA, GL_FLOAT, rgba);
+  glTexSubImage1D(GL_TEXTURE_1D, 0, 0, SH_GRADIENT_TEX_SIZE,
+                  GL_RGBA, GL_FLOAT, rgba);
 }
 
 void shValidateInputStops(SHPaint *p)

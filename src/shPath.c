@@ -163,6 +163,11 @@ VG_API_CALL VGPath vgCreatePath(VGint pathFormat,
   p->dataHint = coordCapacityHint;
   p->datatype = datatype;
   p->caps = capabilities & VG_PATH_CAPABILITY_ALL;
+
+  /* Init cache flags */
+  p->cacheDataValid = VG_TRUE;
+  p->cacheTransformInit = VG_FALSE;
+  p->cacheStrokeInit = VG_FALSE;
   
   VG_RETURN((VGPath)p);
 }
@@ -188,6 +193,9 @@ VG_API_CALL void vgClearPath(VGPath path, VGbitfield capabilities)
   p->data = NULL;
   p->segCount = 0;
   p->dataCount = 0;
+
+  /* Mark change */
+  p->cacheDataValid = VG_FALSE;
   
   /* Downsize arrays to save memory */
   shVertexArrayRealloc(&p->vertices, 1);
@@ -393,6 +401,9 @@ VG_API_CALL void vgAppendPath(VGPath dstPath, VGPath srcPath)
   dst->data = newData;
   dst->segCount += src->segCount;
   dst->dataCount += src->dataCount;
+
+  /* Mark change */
+  dst->cacheDataValid = VG_FALSE;
   
   VG_RETURN(VG_NO_RETVAL);
 }
@@ -458,6 +469,9 @@ VG_API_CALL void vgAppendPathData(VGPath dstPath, VGint newSegCount,
   dst->data = newData;
   dst->segCount += newSegCount;
   dst->dataCount += newDataCount;
+
+  /* Mark change */
+  dst->cacheDataValid = VG_FALSE;
   
   VG_RETURN(VG_NO_RETVAL);
 }
@@ -506,6 +520,9 @@ VG_API_CALL void vgModifyPathCoords(VGPath dstPath, VGint startIndex,
   }else{
     memcpy( ((SHuint8*)p->data) + dataStartSize, data, newDataSize);
   }
+
+  /* Mark change */
+  p->cacheDataValid = VG_FALSE;
   
   VG_RETURN(VG_NO_RETVAL);
 }
@@ -1143,6 +1160,9 @@ VG_API_CALL void vgTransformPath(VGPath dstPath, VGPath srcPath)
   dst->data = newData;
   dst->segCount = segCount;
   dst->dataCount = dataCount;
+
+  /* Mark change */
+  dst->cacheDataValid = VG_FALSE;
   
   VG_RETURN_ERR(VG_NO_ERROR, VG_NO_RETVAL);
 }
@@ -1277,6 +1297,9 @@ VG_API_CALL VGboolean vgInterpolatePath(VGPath dstPath, VGPath startPath,
   dst->data = newData;
   dst->segCount += procSegCount1;
   dst->dataCount += procDataCount1;
+
+  /* Mark change */
+  dst->cacheDataValid = VG_FALSE;
   
   VG_RETURN_ERR(VG_NO_ERROR, VG_TRUE);
 }

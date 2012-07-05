@@ -1,4 +1,4 @@
-AC_INIT(ShivaVG, 0.2.0)
+AC_INIT(ShivaVG, 0.2.1)
 AC_CONFIG_HEADERS([config.h:config.h.in])
 AM_INIT_AUTOMAKE
 AC_CANONICAL_HOST
@@ -143,6 +143,8 @@ esac
 
 LDFLAGS="$LDFLAGS $GL_LIB"
 
+AC_LANG([C])
+
 echo -n "checking for OpenGL library... "
 AC_LINK_IFELSE([
 	char glEnd();
@@ -180,7 +182,8 @@ LDFLAGS=""
 # ==============================================
 # JPEG library required for VGImage example
 
-LDFLAGS="-ljpeg -L/usr/local/lib"
+CFLAGS="-I$prefix/include"
+LDFLAGS="-ljpeg -L/usr/local/lib -L$prefix/lib"
 
 AC_CHECK_HEADERS(
 	[jpeglib.h],
@@ -217,6 +220,7 @@ if test "x$build_test_pattern" = "xyes"; then
 	fi
 fi
 
+CFLASGS=""
 LDFLAGS=""
 
 # ==============================================

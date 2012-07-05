@@ -44,7 +44,7 @@ void display(float interval)
 {
   VGfloat cc[] = {0,0,0,1};
   VGfloat dash[] = {10,15,0,15};
-  
+
   vgSetfv(VG_CLEAR_COLOR, 4, cc);
   vgClear(0,0,testWidth(),testHeight());
   

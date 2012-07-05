@@ -391,7 +391,6 @@ static void shSet(VGContext *context, VGParamType type, SHint count,
     break;
   case VG_SCISSOR_RECTS:
     
-    /* TODO: limit by the VG_MAX_SCISSOR_RECTS value */
     SH_RETURN_ERR_IF(count % 4, VG_ILLEGAL_ARGUMENT_ERROR, SH_NO_RETVAL);
     shBuildScissorContext(context, count, values, floats);
     

@@ -7,9 +7,9 @@ LIB_VG = ${LIB_VG_DIR}/libOpenVG.la
 # (Combine variables passed from configure script with
 # the local path to uninstalled library)
 EXAMPLE_SRCS = test.h test.c
-EXAMPLE_CF = @CONFIG_CFLAGS@ -I${INCLUDE_VG_DIR}
+EXAMPLE_CF = @CONFIG_CFLAGS@ -I${INCLUDE_VG_DIR} -I${prefix}/include
 EXAMPLE_LA = @CONFIG_LDADD@ ${LIB_VG}
-EXAMPLE_LF = @CONFIG_LDFLAGS@
+EXAMPLE_LF = @CONFIG_LDFLAGS@ -L${prefix}/lib
 
 EXTRA_DIST = *.jpg *.png
 

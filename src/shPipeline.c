@@ -196,6 +196,80 @@ static void shDrawPaintMesh(VGContext *c, SHVector2 *min, SHVector2 *max,
   }
 }
 
+VGboolean shIsTessCacheValid (VGContext *c, SHPath *p)
+{
+  SHfloat nX, nY;
+  SHVector2 X, Y;
+  SHMatrix3x3 mi, mchange;
+  VGboolean valid = VG_TRUE;
+
+  if (p->cacheDataValid == VG_FALSE) {
+    valid = VG_FALSE;
+  }
+  else if (p->cacheTransformInit == VG_FALSE) {
+    valid = VG_FALSE;
+  }
+  else if (shInvertMatrix( &p->cacheTransform, &mi ) == VG_FALSE) {
+    valid = VG_FALSE;
+  }
+  else
+  {
+    /* TODO: Compare change matrix for any scale or shear  */
+    MULMATMAT( c->pathTransform, mi, mchange );
+    SET2( X, mi.m[0][0], mi.m[1][0] );
+    SET2( Y, mi.m[0][1], mi.m[1][1] );
+    nX = NORM2( X ); nY = NORM2( Y );
+    if (nX > 1.01f || nX < 0.99 ||
+        nY > 1.01f || nY < 0.99)
+      valid = VG_FALSE;
+  }
+
+  if (valid == VG_FALSE)
+  {
+    /* Update cache */
+    p->cacheDataValid = VG_TRUE;
+    p->cacheTransformInit = VG_TRUE;
+    p->cacheTransform = c->pathTransform;
+    p->cacheStrokeTessValid = VG_FALSE;
+  }
+  
+  return valid;
+}
+
+VGboolean shIsStrokeCacheValid (VGContext *c, SHPath *p)
+{
+  VGboolean valid = VG_TRUE;
+
+  if (p->cacheStrokeInit == VG_FALSE) {
+    valid = VG_FALSE;
+  }
+  else if (p->cacheStrokeTessValid == VG_FALSE) {
+    valid = VG_FALSE;
+  }
+  else if (c->strokeDashPattern.size > 0) {
+    valid = VG_FALSE;
+  }
+  else if (p->cacheStrokeLineWidth  != c->strokeLineWidth  ||
+           p->cacheStrokeCapStyle   != c->strokeCapStyle   ||
+           p->cacheStrokeJoinStyle  != c->strokeJoinStyle  ||
+           p->cacheStrokeMiterLimit != c->strokeMiterLimit) {
+    valid = VG_FALSE;
+  }
+
+  if (valid == VG_FALSE)
+  {
+    /* Update cache */
+    p->cacheStrokeInit = VG_TRUE;
+    p->cacheStrokeTessValid = VG_TRUE;
+    p->cacheStrokeLineWidth  = c->strokeLineWidth;
+    p->cacheStrokeCapStyle   = c->strokeCapStyle;
+    p->cacheStrokeJoinStyle  = c->strokeJoinStyle;
+    p->cacheStrokeMiterLimit = c->strokeMiterLimit;
+  }
+
+  return valid;
+}
+
 /*-----------------------------------------------------------
  * Tessellates / strokes the path and draws it according to
  * VGContext state.
@@ -207,6 +281,7 @@ VG_API_CALL void vgDrawPath(VGPath path, VGbitfield paintModes)
   SHMatrix3x3 mi;
   SHfloat mgl[16];
   SHPaint *fill, *stroke;
+  SHRectangle *rect;
   
   VG_GETCONTEXT(VG_NO_RETVAL);
   
@@ -215,18 +290,33 @@ VG_API_CALL void vgDrawPath(VGPath path, VGbitfield paintModes)
   
   VG_RETURN_ERR_IF(paintModes & (~(VG_STROKE_PATH | VG_FILL_PATH)),
                    VG_ILLEGAL_ARGUMENT_ERROR, VG_NO_RETVAL);
+
+  /* Check whether scissoring is enabled and scissor
+     rectangle is valid */
+  if (context->scissoring == VG_TRUE) {
+    rect = &context->scissor.items[0];
+    if (context->scissor.size == 0) VG_RETURN( VG_NO_RETVAL );
+    if (rect->w <= 0.0f || rect->h <= 0.0f) VG_RETURN( VG_NO_RETVAL );
+    glScissor( (GLint)rect->x, (GLint)rect->y, (GLint)rect->w, (GLint)rect->h );
+    glEnable( GL_SCISSOR_TEST );
+  }
   
   p = (SHPath*)path;
   
   /* If user-to-surface matrix invertible tessellate in
      surface space for better path resolution */
-  if (shInvertMatrix(&context->pathTransform, &mi)) {
-    shFlattenPath(p, 1);
-    shTransformVertices(&mi, p);
-  }else shFlattenPath(p, 0);
-  shFindBoundbox(p);
+  if (shIsTessCacheValid( context, p ) == VG_FALSE)
+  {
+    if (shInvertMatrix(&context->pathTransform, &mi)) {
+      shFlattenPath(p, 1);
+      shTransformVertices(&mi, p);
+    }else shFlattenPath(p, 0);
+    shFindBoundbox(p);
+  }
   
   /* TODO: Turn antialiasing on/off */
+  glDisable(GL_LINE_SMOOTH);
+  glDisable(GL_POLYGON_SMOOTH);
   glEnable(GL_MULTISAMPLE);
   
   /* Pick paint if available or default*/
@@ -272,6 +362,8 @@ VG_API_CALL void vgDrawPath(VGPath path, VGbitfield paintModes)
   }
   
   /* TODO: Turn antialiasing on/off */
+  glDisable(GL_LINE_SMOOTH);
+  glDisable(GL_POLYGON_SMOOTH);
   glEnable(GL_MULTISAMPLE);
   
   if ((paintModes & VG_STROKE_PATH) &&
@@ -279,9 +371,12 @@ VG_API_CALL void vgDrawPath(VGPath path, VGbitfield paintModes)
     
     if (1) {/*context->strokeLineWidth > 1.0f) {*/
 
-      /* Generate stroke triangles in path space */
-      shVector2ArrayClear(&p->stroke);
-      shStrokePath(context, p);
+      if (shIsStrokeCacheValid( context, p ) == VG_FALSE)
+      {
+        /* Generate stroke triangles in user space */
+        shVector2ArrayClear(&p->stroke);
+        shStrokePath(context, p);
+      }
 
       /* Stroke into stencil */
       glEnable(GL_STENCIL_TEST);
@@ -335,6 +430,9 @@ VG_API_CALL void vgDrawPath(VGPath path, VGbitfield paintModes)
   glDisable(GL_MULTISAMPLE);
   glPopMatrix();
   
+  if (context->scissoring == VG_TRUE)
+    glDisable( GL_SCISSOR_TEST );
+
   VG_RETURN(VG_NO_RETVAL);
 }
 
@@ -346,13 +444,24 @@ VG_API_CALL void vgDrawImage(VGImage image)
   SHfloat texGenT[4] = {0,0,0,0};
   SHPaint *fill;
   SHVector2 min, max;
+  SHRectangle *rect;
   
   VG_GETCONTEXT(VG_NO_RETVAL);
   
   VG_RETURN_ERR_IF(!shIsValidImage(context, image),
                    VG_BAD_HANDLE_ERROR, VG_NO_RETVAL);
-  
+
   /* TODO: check if image is current render target */
+  
+  /* Check whether scissoring is enabled and scissor
+     rectangle is valid */
+  if (context->scissoring == VG_TRUE) {
+    rect = &context->scissor.items[0];
+    if (context->scissor.size == 0) VG_RETURN( VG_NO_RETVAL );
+    if (rect->w <= 0.0f || rect->h <= 0.0f) VG_RETURN( VG_NO_RETVAL );
+    glScissor( (GLint)rect->x, (GLint)rect->y, (GLint)rect->w, (GLint)rect->h );
+    glEnable( GL_SCISSOR_TEST );
+  }
   
   /* Apply image-user-to-surface transformation */
   i = (SHImage*)image;
@@ -465,6 +574,9 @@ VG_API_CALL void vgDrawImage(VGImage image)
   glDisable(GL_TEXTURE_GEN_S);
   glDisable(GL_TEXTURE_GEN_T);
   glPopMatrix();
+
+  if (context->scissoring == VG_TRUE)
+    glDisable( GL_SCISSOR_TEST );
   
   VG_RETURN(VG_NO_RETVAL);
 }
